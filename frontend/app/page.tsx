@@ -99,7 +99,7 @@ export default function SentimentAnalysisDashboard() {
               <Upload className="h-5 w-5" />
               Upload Content for Analysis
             </CardTitle>
-            <CardDescription>Upload a CSV, TXT, or JSON file with content to analyze</CardDescription>
+            <CardDescription>Upload a CSV file with content to analyze</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
