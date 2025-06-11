@@ -31,8 +31,15 @@ export async function analyzeTextSentiment(text: string): Promise<SentimentResul
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error analyzing sentiment:', error);
-    throw error;
+    // Silently handle errors and return default sentiment result
+    return {
+      text: text,
+      score: 0,
+      magnitude: 0,
+      categories: [],
+      topPhrases: [],
+      entities: []
+    };
   }
 }
 

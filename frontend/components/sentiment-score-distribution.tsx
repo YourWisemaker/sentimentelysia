@@ -11,6 +11,11 @@ interface SentimentScoreDistributionProps {
 }
 
 export function SentimentScoreDistribution({ data }: SentimentScoreDistributionProps) {
+  // Return nothing if no data
+  if (!data || data.length === 0) {
+    return null
+  }
+
   // Create histogram data
   const createHistogram = (scores: number[], bins = 20) => {
     if (scores.length === 0) {
@@ -27,6 +32,7 @@ export function SentimentScoreDistribution({ data }: SentimentScoreDistributionP
       rangeEnd: min + (i + 1) * binSize,
       count: 0,
       midpoint: min + (i + 0.5) * binSize,
+      binIndex: i,
     }))
 
     scores.forEach((score) => {
@@ -42,22 +48,7 @@ export function SentimentScoreDistribution({ data }: SentimentScoreDistributionP
   const scores = data.map((d) => d.score).filter((score) => typeof score === "number" && !isNaN(score))
 
   if (scores.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Sentiment Score Distribution
-          </CardTitle>
-          <CardDescription>Statistical distribution of sentiment scores across all analyzed content</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-64 text-gray-500">
-            No sentiment data available for analysis
-          </div>
-        </CardContent>
-      </Card>
-    )
+    return null
   }
 
   const histogramData = createHistogram(scores, 15)
@@ -136,12 +127,16 @@ export function SentimentScoreDistribution({ data }: SentimentScoreDistributionP
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={histogramData}>
                   <XAxis
-                    dataKey="midpoint"
+                    dataKey="binIndex"
                     type="number"
                     scale="linear"
-                    domain={["dataMin", "dataMax"]}
+                    domain={[0, histogramData.length - 1]}
                     tick={{ fontSize: 10 }}
-                    tickFormatter={formatTick}
+                    tickFormatter={(value) => {
+                      const bin = histogramData[value]
+                      return bin ? formatTick(bin.midpoint) : ''
+                    }}
+                    interval={0}
                   />
                   <YAxis tick={{ fontSize: 12 }} />
                   <ChartTooltip
@@ -172,12 +167,16 @@ export function SentimentScoreDistribution({ data }: SentimentScoreDistributionP
               <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={cumulativeData}>
                   <XAxis
-                    dataKey="midpoint"
+                    dataKey="binIndex"
                     type="number"
                     scale="linear"
-                    domain={["dataMin", "dataMax"]}
+                    domain={[0, histogramData.length - 1]}
                     tick={{ fontSize: 10 }}
-                    tickFormatter={formatTick}
+                    tickFormatter={(value) => {
+                      const bin = histogramData[value]
+                      return bin ? formatTick(bin.midpoint) : ''
+                    }}
+                    interval={0}
                   />
                   <YAxis tick={{ fontSize: 12 }} />
                   <ChartTooltip

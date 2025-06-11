@@ -30,38 +30,98 @@ function parseCSV(csvContent: string): string[] {
   // Split the content by newlines
   const lines = csvContent.split(/\r?\n/).filter((line) => line.trim() !== '');
 
+  if (lines.length === 0) {
+    return [];
+  }
+
   // Process each line to extract the text content
   const texts: string[] = [];
+  let headerProcessed = false;
+  let contentColumnIndex = -1;
 
   for (const line of lines) {
-    // Check if the line is a CSV header (common headers)
-    if (
-      line.toLowerCase().includes('tweet') ||
-      line.toLowerCase().includes('text') ||
-      line.toLowerCase().includes('content') ||
-      line.toLowerCase().includes('post')
-    ) {
-      continue; // Skip header row
-    }
-
-    // Handle quoted CSV values
-    if (line.includes('"')) {
-      // Extract content between quotes
-      const matches = line.match(/"([^"]+)"/);
-      if (matches && matches[1]) {
-        texts.push(matches[1].trim());
-        continue;
+    // Parse CSV line properly handling quoted values
+    const columns = parseCSVLine(line);
+    
+    // Check if this is the header row
+    if (!headerProcessed) {
+      headerProcessed = true;
+      
+      // Find the content column index
+      for (let i = 0; i < columns.length; i++) {
+        const header = columns[i].toLowerCase().trim();
+        if (header === 'content' || header === 'text' || header === 'tweet' || header === 'post' || header === 'message') {
+          contentColumnIndex = i;
+          break;
+        }
       }
+      
+      // If no specific content column found, assume it's the 3rd column (index 2) for tweet format
+      if (contentColumnIndex === -1 && columns.length >= 3) {
+        contentColumnIndex = 2; // Content column in tweet CSV format
+      }
+      
+      // Skip header row
+      continue;
     }
 
-    // If no quotes or no match, just use the whole line or first column
-    const columns = line.split(',');
-    if (columns.length > 0) {
-      texts.push(columns[0].trim());
+    // Extract content from the identified column
+    if (contentColumnIndex >= 0 && contentColumnIndex < columns.length) {
+      const content = columns[contentColumnIndex].trim();
+      if (content && content !== '') {
+        texts.push(content);
+      }
+    } else if (columns.length > 0) {
+      // Fallback to first column if no content column identified
+      const content = columns[0].trim();
+      if (content && content !== '') {
+        texts.push(content);
+      }
     }
   }
 
   return texts;
+}
+
+/**
+ * Parse a single CSV line handling quoted values properly
+ * @param line The CSV line to parse
+ * @returns Array of column values
+ */
+function parseCSVLine(line: string): string[] {
+  const columns: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  let i = 0;
+
+  while (i < line.length) {
+    const char = line[i];
+    
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        // Escaped quote
+        current += '"';
+        i += 2;
+      } else {
+        // Toggle quote state
+        inQuotes = !inQuotes;
+        i++;
+      }
+    } else if (char === ',' && !inQuotes) {
+      // End of column
+      columns.push(current);
+      current = '';
+      i++;
+    } else {
+      current += char;
+      i++;
+    }
+  }
+  
+  // Add the last column
+  columns.push(current);
+  
+  return columns;
 }
 
 /**

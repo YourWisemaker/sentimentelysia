@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -18,20 +18,33 @@ import { analyzeSentiment, analyzeSentimentFromFile, SentimentResult } from "@/l
 import { sampleTweets } from "@/lib/sample-data"
 import { Twitter, TrendingUp, Hash, Upload, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { parseCSV } from "@/lib/file-parser"
+import { CsvUploader } from "@/components/csv-uploader"
 
 export default function SentimentAnalysisDashboard() {
-  const [tweets, setTweets] = useState<string[]>(sampleTweets)
+  const [tweets, setTweets] = useState<string[]>([])
   const [newTweet, setNewTweet] = useState("")
   const [sentimentData, setSentimentData] = useState<SentimentResult[]>([])
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [fileUploadError, setFileUploadError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isFromFileUpload, setIsFromFileUpload] = useState(false)
 
   useEffect(() => {
-    analyzeTweets()
-  }, [tweets])
+    // Only analyze tweets if they weren't added from file upload
+    if (!isFromFileUpload && tweets.length > 0) {
+      analyzeTweets()
+    }
+  }, [tweets, isFromFileUpload])
+
+  // Separate useEffect to reset the flag after a delay
+  useEffect(() => {
+    if (isFromFileUpload) {
+      const timer = setTimeout(() => {
+        setIsFromFileUpload(false)
+      }, 100) // Small delay to ensure state updates are processed
+      return () => clearTimeout(timer)
+    }
+  }, [isFromFileUpload])
 
   const analyzeTweets = async () => {
     setIsAnalyzing(true)
@@ -42,51 +55,13 @@ export default function SentimentAnalysisDashboard() {
 
   const addTweet = () => {
     if (newTweet.trim()) {
+      setIsFromFileUpload(false) // Ensure manual tweets trigger analysis
       setTweets([...tweets, newTweet.trim()])
       setNewTweet("")
     }
   }
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
 
-    setIsUploading(true)
-    setFileUploadError(null)
-
-    try {
-      const fileExt = file.name.split('.').pop()?.toLowerCase() || ''
-      
-      if (['csv', 'txt', 'json'].includes(fileExt)) {
-        // Use the backend API to analyze the file directly
-        const results = await analyzeSentimentFromFile(file)
-        
-        if (results.length === 0) {
-          throw new Error(`No valid content found in the ${fileExt.toUpperCase()} file`)
-        }
-        
-        // Extract the text from results to add to tweets list
-        const extractedTexts = results.map((result: SentimentResult) => result.text)
-        setTweets((prev: string[]) => [...prev, ...extractedTexts])
-        
-        // Update sentiment data directly
-        setSentimentData((prev: SentimentResult[]) => [...prev, ...results])
-      } else {
-        throw new Error(`Unsupported file format: ${fileExt}. Please upload a CSV, TXT, or JSON file.`)
-      }
-    } catch (error) {
-      setFileUploadError(error instanceof Error ? error.message : "Failed to process file")
-    } finally {
-      setIsUploading(false)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ""
-      }
-    }
-  }
-
-  const triggerFileUpload = () => {
-    fileInputRef.current?.click()
-  }
 
   const overallSentiment =
     sentimentData.length > 0 ? sentimentData.reduce((sum: number, data: SentimentResult) => sum + data.score, 0) / sentimentData.length : 0
@@ -110,10 +85,10 @@ export default function SentimentAnalysisDashboard() {
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center gap-2">
             <Twitter className="h-8 w-8 text-blue-500" />
-            <h1 className="text-4xl font-bold text-gray-900">Social Media Sentiment Analyzer</h1>
+            <h1 className="text-4xl font-bold text-gray-900">Twitter Sentiment Analyzer</h1>
           </div>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Analyze sentiment patterns in social media content with AI-powered insights and comprehensive visualizations
+            Analyze sentiment patterns in twitter content with AI-powered insights and comprehensive visualizations
           </p>
         </div>
 
@@ -127,23 +102,23 @@ export default function SentimentAnalysisDashboard() {
             <CardDescription>Upload a CSV, TXT, or JSON file with content to analyze</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center gap-2 bg-white/50">
-              <Upload className="h-8 w-8 text-gray-400" />
-              <p className="text-sm text-gray-600 text-center">Upload a file with content to analyze</p>
-              <p className="text-xs text-gray-500 text-center">Supported formats: CSV, TXT, JSON</p>
-              <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv,.txt,.json" className="hidden" />
-              <Button variant="outline" onClick={triggerFileUpload} disabled={isUploading} className="mt-2">
-                {isUploading ? "Analyzing..." : "Select File"}
-              </Button>
+            <div className="space-y-4">
+              <CsvUploader 
+                onUploadSuccess={(results) => {
+                  if (results.length === 0) {
+                    setFileUploadError("No valid content found in the file");
+                    return;
+                  }
+                  
+                  const extractedTexts = results.map((result: SentimentResult) => result.text);
+                  setIsFromFileUpload(true);
+                  setTweets(extractedTexts); // Replace instead of append
+                  setSentimentData(results); // Replace instead of append
+                  setFileUploadError(null);
+                }}
+                onUploadError={(error) => setFileUploadError(error)}
+              />
             </div>
-
-            {fileUploadError && (
-              <Alert variant="destructive" className="mt-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{fileUploadError}</AlertDescription>
-              </Alert>
-            )}
           </CardContent>
         </Card>
 
@@ -173,10 +148,13 @@ export default function SentimentAnalysisDashboard() {
 
         {/* Visualization Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-6">
+          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-9">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="wordcloud">Word Cloud</TabsTrigger>
+            <TabsTrigger value="wordcloud-all">Word Cloud</TabsTrigger>
+            <TabsTrigger value="wordcloud-positive">Positive Words</TabsTrigger>
+            <TabsTrigger value="wordcloud-negative">Negative Words</TabsTrigger>
             <TabsTrigger value="polarity">Polarity</TabsTrigger>
+            <TabsTrigger value="category">Category</TabsTrigger>
             <TabsTrigger value="phrases">Top Phrases</TabsTrigger>
             <TabsTrigger value="correlation">Correlation</TabsTrigger>
             <TabsTrigger value="distribution">Distribution</TabsTrigger>
@@ -186,17 +164,52 @@ export default function SentimentAnalysisDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <SentimentPolarityChart data={sentimentData} />
               <SentimentScoreDistribution data={sentimentData} />
-              <SentimentByCategory data={sentimentData} />
               <TopPhrasesCard data={sentimentData} />
+              <WordCloud 
+                data={sentimentData} 
+                sentimentFilter="all" 
+                title="Mixed Word Cloud" 
+                description="Most frequently used words across all sentiment categories" 
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-6">
+              <SentimentByCategory data={sentimentData} />
             </div>
           </TabsContent>
 
-          <TabsContent value="wordcloud">
-            <WordCloud data={sentimentData} />
+          <TabsContent value="wordcloud-all">
+            <WordCloud 
+              data={sentimentData} 
+              sentimentFilter="all" 
+              title="Mixed Word Cloud" 
+              description="Most frequently used words across all sentiment categories" 
+            />
+          </TabsContent>
+
+          <TabsContent value="wordcloud-positive">
+            <WordCloud 
+              data={sentimentData} 
+              sentimentFilter="positive" 
+              title="Positive Word Cloud" 
+              description="Most frequently used words in positive sentiment content" 
+            />
+          </TabsContent>
+
+          <TabsContent value="wordcloud-negative">
+            <WordCloud 
+              data={sentimentData} 
+              sentimentFilter="negative" 
+              title="Negative Word Cloud" 
+              description="Most frequently used words in negative sentiment content" 
+            />
           </TabsContent>
 
           <TabsContent value="polarity">
             <SentimentPolarityChart data={sentimentData} />
+          </TabsContent>
+
+          <TabsContent value="category">
+            <SentimentByCategory data={sentimentData} />
           </TabsContent>
 
           <TabsContent value="phrases">

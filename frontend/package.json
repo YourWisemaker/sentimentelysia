@@ -1,5 +1,5 @@
 {
-  "name": "my-v0-project",
+  "name": "sentiment-analysis-dashboard",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -48,10 +48,12 @@
     "next": "15.2.4",
     "next-themes": "^0.4.4",
     "react": "^19",
+    "react-d3-cloud": "^1.0.6",
     "react-day-picker": "8.10.1",
     "react-dom": "^19",
     "react-hook-form": "^7.54.1",
     "react-resizable-panels": "^2.1.7",
+    "react-wordcloud": "^1.2.7",
     "recharts": "latest",
     "sonner": "^1.7.1",
     "tailwind-merge": "^2.5.5",

@@ -11,6 +11,11 @@ interface SentimentPolarityChartProps {
 }
 
 export function SentimentPolarityChart({ data }: SentimentPolarityChartProps) {
+  // Return nothing if no data
+  if (!data || data.length === 0) {
+    return null
+  }
+
   // Create polarity distribution data
   const polarityData = [
     {
@@ -73,7 +78,7 @@ export function SentimentPolarityChart({ data }: SentimentPolarityChartProps) {
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                   {polarityData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                    <Cell key={`polarity-cell-${index}-${entry.range}`} fill={entry.color} />
                   ))}
                 </Bar>
               </BarChart>
@@ -107,13 +112,12 @@ export function SentimentPolarityChart({ data }: SentimentPolarityChartProps) {
                     return null
                   }}
                 />
-                <Scatter
-                  dataKey="y"
-                  fill={(entry) => {
-                    const sentiment = entry.sentiment
-                    return sentiment === "positive" ? "#22c55e" : sentiment === "negative" ? "#ef4444" : "#eab308"
-                  }}
-                />
+                <Scatter dataKey="y">
+                  {scatterData.map((entry, index) => {
+                    const color = entry.sentiment === "positive" ? "#22c55e" : entry.sentiment === "negative" ? "#ef4444" : "#eab308"
+                    return <Cell key={`scatter-cell-${index}-${entry.x}-${entry.y}`} fill={color} />
+                  })}
+                </Scatter>
               </ScatterChart>
             </ResponsiveContainer>
           </ChartContainer>

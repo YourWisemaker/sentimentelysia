@@ -11,6 +11,11 @@ interface SentimentByCategoryProps {
 }
 
 export function SentimentByCategory({ data }: SentimentByCategoryProps) {
+  // Return nothing if no data
+  if (!data || data.length === 0) {
+    return null
+  }
+
   // Categorize content based on keywords and sentiment
   const categorizeContent = (text: string, sentiment: number) => {
     if (!text) return "General"
@@ -138,7 +143,7 @@ export function SentimentByCategory({ data }: SentimentByCategoryProps) {
                     label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                   >
                     {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell key={`pie-cell-${index}-${entry.name}-${entry.value}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
                   <ChartTooltip

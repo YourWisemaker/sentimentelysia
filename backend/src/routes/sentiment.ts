@@ -1,5 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { analyzeSentiment } from '@/services/sentiment-service';
+import { processCsvFile } from '@/services/csv-sentiment-service';
 import { processFile } from '../services/file-service';
 
 export const sentimentRoutes = new Elysia({ prefix: '/api' })

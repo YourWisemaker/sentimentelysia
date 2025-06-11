@@ -11,6 +11,11 @@ interface SentimentCorrelationMapProps {
 }
 
 export function SentimentCorrelationMap({ data }: SentimentCorrelationMapProps) {
+  // Return nothing if no data
+  if (!data || data.length === 0) {
+    return null
+  }
+
   // Create correlation data based on text length vs sentiment
   const correlationData = data.map((item, index) => ({
     textLength: item.text ? item.text.length : 0,
@@ -92,7 +97,7 @@ export function SentimentCorrelationMap({ data }: SentimentCorrelationMapProps) 
                     />
                     <Scatter dataKey="sentiment">
                       {correlationData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={getColor(entry.category)} />
+                        <Cell key={`correlation-cell-${index}-${entry.textLength}-${entry.sentiment}`} fill={getColor(entry.category)} />
                       ))}
                     </Scatter>
                   </ScatterChart>
@@ -135,7 +140,7 @@ export function SentimentCorrelationMap({ data }: SentimentCorrelationMapProps) 
                     />
                     <Scatter dataKey="sentiment">
                       {wordCountData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={getColor(entry.category)} />
+                        <Cell key={`wordcount-cell-${index}-${entry.wordCount}-${entry.sentiment}`} fill={getColor(entry.category)} />
                       ))}
                     </Scatter>
                   </ScatterChart>

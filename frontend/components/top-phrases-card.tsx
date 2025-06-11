@@ -10,6 +10,11 @@ interface TopPhrasesCardProps {
 }
 
 export function TopPhrasesCard({ data }: TopPhrasesCardProps) {
+  // Return nothing if no data
+  if (!data || data.length === 0) {
+    return null
+  }
+
   // Extract phrases (2-3 word combinations)
   const extractPhrases = (text: string) => {
     const words = text
