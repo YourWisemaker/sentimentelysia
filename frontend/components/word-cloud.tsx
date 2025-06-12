@@ -5,6 +5,7 @@ import type { SentimentResult } from "@/lib/sentiment-analyzer"
 import { Cloud } from "lucide-react"
 import dynamic from "next/dynamic"
 import { useMemo, useCallback } from "react"
+import { extractWordCounts } from "@/lib/text-processor"
 
 // Dynamically import WordCloud to avoid SSR issues
 const ReactWordCloud = dynamic(() => import("react-d3-cloud"), {
@@ -46,55 +47,24 @@ export function WordCloud({ data, sentimentFilter = 'all', title = 'Word Cloud',
     }
   }, [data, sentimentFilter])
 
-  // Extract and count words
-  const wordCounts = (filteredData || []).reduce(
-    (acc, item) => {
-      // Check if item.text exists before processing
-      if (!item.text) {
-        return acc;
-      }
-      
-      const words = item.text
-        .toLowerCase()
-        .replace(/[^\w\s]/g, "")
-        .split(/\s+/)
-        .filter(
-          (word) =>
-            word.length > 3 &&
-            ![
-              "this",
-              "that",
-              "with",
-              "have",
-              "will",
-              "from",
-              "they",
-              "been",
-              "were",
-              "said",
-              "each",
-              "which",
-              "their",
-              "time",
-              "would",
-              "there",
-              "could",
-              "other",
-            ].includes(word),
-        )
-
-      words.forEach((word) => {
-        acc[word] = (acc[word] || 0) + 1
-      })
-      return acc
-    },
-    {} as Record<string, number>,
-  )
+  // Extract and count words using advanced text processing
+  const wordCounts = useMemo(() => {
+    const texts = filteredData
+      .map(item => item.text)
+      .filter(text => text && typeof text === 'string');
+    
+    return extractWordCounts(texts, {
+      removeStopWords: true,
+      applyStemming: true,
+      minWordLength: 3,
+      removeNumbers: true,
+      removeUrls: true,
+      maxWords: 100
+    });
+  }, [filteredData]);
 
   // Convert word counts to react-wordcloud format
   const words = Object.entries(wordCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 100)
     .map(([text, value]) => ({ text: String(text), value: Number(value) }))
     .filter(word => word.text && word.text.length > 0 && word.value > 0 && !isNaN(word.value))
 

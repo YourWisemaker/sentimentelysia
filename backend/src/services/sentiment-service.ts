@@ -1,6 +1,7 @@
 import { ChatOpenRouter } from '../lib/openrouter';
 import { PromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
+import { extractTopPhrases, processText } from '../lib/text-processor';
 
 // Define the sentiment analysis result interface
 export interface SentimentResult {
@@ -137,12 +138,33 @@ export async function analyzeSentiment(text: string): Promise<SentimentResult> {
       };
     }
     
+    // Enhance topPhrases with better text processing
+    let enhancedTopPhrases = Array.isArray(parsedResult.topPhrases) ? parsedResult.topPhrases : [];
+    
+    // If AI didn't provide good phrases or provided too few, extract them using text processing
+    if (enhancedTopPhrases.length < 3) {
+      const extractedPhrases = extractTopPhrases(text, 5);
+      enhancedTopPhrases = [...enhancedTopPhrases, ...extractedPhrases].slice(0, 5);
+    }
+    
+    // If still no phrases, fall back to processed words
+    if (enhancedTopPhrases.length === 0) {
+      const processedWords = processText(text, {
+        removeStopWords: true,
+        applyStemming: false, // Keep original form for phrases
+        minWordLength: 4,
+        removeNumbers: true,
+        removeUrls: true
+      });
+      enhancedTopPhrases = processedWords.slice(0, 5);
+    }
+    
     // Validate required fields and provide defaults
     const validatedResult = {
       score: typeof parsedResult.score === 'number' ? parsedResult.score : 0,
       magnitude: typeof parsedResult.magnitude === 'number' ? parsedResult.magnitude : 0.5,
       categories: Array.isArray(parsedResult.categories) ? parsedResult.categories : ['general'],
-      topPhrases: Array.isArray(parsedResult.topPhrases) ? parsedResult.topPhrases : [],
+      topPhrases: enhancedTopPhrases,
       entities: Array.isArray(parsedResult.entities) ? parsedResult.entities : []
     };
     
